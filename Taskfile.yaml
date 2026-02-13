@@ -1,0 +1,40 @@
+version: '3'
+
+vars:
+  REGISTRY: ghcr.io/nce
+  IMAGE_NAME: klustered
+
+tasks:
+  air:
+    desc: Build local binary
+    dir: app/
+    cmd: 
+      air --build.cmd "go build -o bin/app -ldflags='-X main.version=foo'" --build.bin "./bin/app"
+  build:
+    desc: Build images
+    dir: app/
+    cmds:
+    - for: 
+        matrix:
+          PLATFORM: ['linux/amd64']
+          #PLATFORM: ['linux/amd64', 'linux/arm64']
+          VERSION: ['v1', 'v2']
+      cmd: 
+        docker buildx build
+          --build-arg APP_VERSION="{{.ITEM.VERSION}}"
+          --platform {{.ITEM.PLATFORM}} 
+          --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:{{.ITEM.VERSION}} .
+  push:
+    desc: Push images to github
+    cmd: 
+    cmds:
+    - gh auth token | docker login ghcr.io --username $(whoami) --password-stdin
+    #- gh auth token | container registry login ghcr.io --username $(whoami) --password-stdin
+    - for: 
+        matrix:
+          PLATFORM: ['linux/amd64']
+          VERSION: ['v1', 'v2']
+      cmd: 
+        docker image push
+          --platform {{.ITEM.PLATFORM}}
+          {{.REGISTRY}}/{{.IMAGE_NAME}}:{{.ITEM.VERSION}}
