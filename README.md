@@ -1,3 +1,9 @@
+<p align="center" width="100%">
+    <kbd>
+        <img src="./docs/logo.png" width="400" />
+    </kbd>
+</p>
+
 # Kubewreck App
 
 This is a demo application which renders a static html page with
