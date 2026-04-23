@@ -2,11 +2,11 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
-	"fmt"
-	"encoding/json"
 )
 
 //go:embed static/*
@@ -31,10 +31,10 @@ func main() {
 		const upgrade = `
 			<p><span style="italic; color:#FFFFC5"><i>Upgrade available:</span></p>
 			<div class="code-container">
-				kubectl set image deploy/foo app:ghcr.io/nce/klustered:v2
+				kubectl set image deployment/kubewreck kubewreck=ghcr.io/nce/kubewreck:v2
 			</div>
 		`
-		const latest  = " 🥳 this this the latest version 🥳"
+		const latest = " 🥳 this this the latest version 🥳"
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 

@@ -2,7 +2,7 @@ version: '3'
 
 vars:
   REGISTRY: ghcr.io/nce
-  IMAGE_NAME: klustered
+  IMAGE_NAME: kubewreck
 
 tasks:
   air:
@@ -14,16 +14,19 @@ tasks:
     desc: Build images
     dir: app/
     cmds:
-    - for: 
-        matrix:
-          PLATFORM: ['linux/amd64']
-          #PLATFORM: ['linux/amd64', 'linux/arm64']
-          VERSION: ['v1', 'v2']
-      cmd: 
-        docker buildx build
-          --build-arg APP_VERSION="{{.ITEM.VERSION}}"
-          --platform {{.ITEM.PLATFORM}} 
-          --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:{{.ITEM.VERSION}} .
+    - docker buildx build
+        --builder naughty_benz
+        --build-arg APP_VERSION="v1"
+        --platform linux/amd64
+        --platform linux/arm64
+        --push
+        --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v1 .
+    - docker buildx build
+        --builder naughty_benz
+        --build-arg APP_VERSION="v2"
+        --platform linux/amd64
+        --push
+        --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v2 .
   push:
     desc: Push images to github
     cmd: 
@@ -32,9 +35,15 @@ tasks:
     #- gh auth token | container registry login ghcr.io --username $(whoami) --password-stdin
     - for: 
         matrix:
-          PLATFORM: ['linux/amd64']
-          VERSION: ['v1', 'v2']
+          PLATFORM: 
+          - linux/amd64
+          - linux/arm64
+          VERSION: 
+          - v1
       cmd: 
         docker image push
           --platform {{.ITEM.PLATFORM}}
           {{.REGISTRY}}/{{.IMAGE_NAME}}:{{.ITEM.VERSION}}
+    - docker image push
+        --platform "linux/amd64"
+        {{.REGISTRY}}/{{.IMAGE_NAME}}:v2
