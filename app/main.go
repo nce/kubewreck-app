@@ -24,6 +24,9 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xhtml+xml; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
 		fileServer.ServeHTTP(w, r)
 	})
 
@@ -31,7 +34,7 @@ func main() {
 		const upgrade = `
 			<p><span style="italic; color:#FFFFC5"><i>Upgrade available:</span></p>
 			<div class="code-container">
-				kubectl set image deployment/kubewreck kubewreck=ghcr.io/nce/kubewreck:v2
+				kubectl set image deployment/kubewreck kubewreck=ghcr.io/nce/kubewreck-app:v2
 			</div>
 		`
 		const latest = " 🥳 this this the latest version 🥳"
