@@ -3,6 +3,7 @@ version: '3'
 vars:
   REGISTRY: ghcr.io/nce
   IMAGE_NAME: kubewreck-app
+  LOCAL_PLATFORM: linux/amd64
 
 tasks:
   air:
@@ -11,11 +12,30 @@ tasks:
     cmd: 
       air --build.cmd "go build -o bin/app -ldflags='-X main.version=foo'" --build.bin "./bin/app"
   build:
-    desc: Build images
+    desc: Build local images
     dir: app/
     cmds:
     - docker buildx build
         --builder naughty_benz
+        --target v1
+        --build-arg APP_VERSION="v1"
+        --platform {{.LOCAL_PLATFORM}}
+        --load
+        --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v1 .
+    - docker buildx build
+        --builder naughty_benz
+        --target v2
+        --build-arg APP_VERSION="v2"
+        --platform {{.LOCAL_PLATFORM}}
+        --load
+        --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v2 .
+  build-push:
+    internal: true
+    dir: app/
+    cmds:
+    - docker buildx build
+        --builder naughty_benz
+        --target v1
         --build-arg APP_VERSION="v1"
         --platform linux/amd64
         --platform linux/arm64
@@ -23,27 +43,19 @@ tasks:
         --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v1 .
     - docker buildx build
         --builder naughty_benz
+        --target v2
         --build-arg APP_VERSION="v2"
         --platform linux/amd64
+        --platform linux/arm64
         --push
         --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v2 .
-  push:
-    desc: Push images to github
-    cmd: 
+  registry-login:
+    internal: true
+    desc: Login to GitHub Container Registry
     cmds:
     - gh auth token | docker login ghcr.io --username $(whoami) --password-stdin
-    #- gh auth token | container registry login ghcr.io --username $(whoami) --password-stdin
-    - for: 
-        matrix:
-          PLATFORM: 
-          - linux/amd64
-          - linux/arm64
-          VERSION: 
-          - v1
-      cmd: 
-        docker image push
-          --platform {{.ITEM.PLATFORM}}
-          {{.REGISTRY}}/{{.IMAGE_NAME}}:{{.ITEM.VERSION}}
-    - docker image push
-        --platform "linux/amd64"
-        {{.REGISTRY}}/{{.IMAGE_NAME}}:v2
+  push:
+    desc: Login and push images to GitHub Container Registry
+    cmds:
+    - task: registry-login
+    - task: build-push
