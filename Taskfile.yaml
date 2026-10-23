@@ -29,31 +29,43 @@ tasks:
         --platform {{.LOCAL_PLATFORM}}
         --load
         --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v2 .
-  build-push:
-    internal: true
-    dir: app/
-    cmds:
-    - docker buildx build
-        --builder naughty_benz
-        --target v1
-        --build-arg APP_VERSION="v1"
-        --platform linux/amd64
-        --push
-        --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v1 .
-    - docker buildx build
-        --builder naughty_benz
-        --target v2
-        --build-arg APP_VERSION="v2"
-        --platform linux/amd64
-        --push
-        --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v2 .
-  registry-login:
-    internal: true
-    desc: Login to GitHub Container Registry
-    cmds:
-    - gh auth token | docker login ghcr.io --username $(whoami) --password-stdin
   push:
     desc: Login and push images to GitHub Container Registry
+    dir: app/
     cmds:
-    - task: registry-login
-    - task: build-push
+    - |
+      sh -eu <<'PUSH_SCRIPT'
+      original_config="${DOCKER_CONFIG:-$HOME/.docker}"
+      push_config="$(mktemp -d)"
+      trap 'rm -rf "$push_config"' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+
+      # Preserve the selected daemon, named builders, and user-installed plugins.
+      push_context="$(docker context show)"
+      export DOCKER_CONTEXT="$push_context"
+      export BUILDX_CONFIG="${BUILDX_CONFIG:-$original_config/buildx}"
+      for directory in contexts cli-plugins; do
+        if [ -d "$original_config/$directory" ]; then
+          ln -s "$original_config/$directory" "$push_config/$directory"
+        fi
+      done
+      # File-based auth in a private temporary directory bypasses macOS Keychain.
+      github_user="$(gh api user --jq .login)"
+      github_token="$(gh auth token)"
+      registry_auth="$(printf '%s:%s' "$github_user" "$github_token" | base64 | tr -d '\r\n')"
+      printf '{"auths":{"ghcr.io":{"auth":"%s"}}}\n' "$registry_auth" > "$push_config/config.json"
+      chmod 600 "$push_config/config.json"
+      unset github_token registry_auth
+      export DOCKER_CONFIG="$push_config"
+
+      for target in v1 v2; do
+        docker buildx build \
+          --builder naughty_benz \
+          --target "$target" \
+          --build-arg APP_VERSION="$target" \
+          --platform linux/amd64 \
+          --push \
+          --tag "{{.REGISTRY}}/{{.IMAGE_NAME}}:$target" .
+      done
+      PUSH_SCRIPT

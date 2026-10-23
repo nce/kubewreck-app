@@ -30,3 +30,7 @@ Push Image to ghcr with
 ```
 task push
 ```
+
+The push task uses your GitHub CLI account and token with a temporary Docker
+configuration, bypassing macOS Keychain. It preserves the selected Docker context
+and Buildx builders, and deletes the temporary credentials when the task exits.

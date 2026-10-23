@@ -17,9 +17,9 @@ displays a new version of the page.
 
 ## PostgreSQL setup
 
-Provision a PostgreSQL database and configure its connection using the required
-`DATABASE_URL` environment variable. This includes the host, port, database,
-username, password, and TLS settings. For a local development database:
+Provision a PostgreSQL database and configure its connection using either
+`DATABASE_URL`, individual `PG*` environment variables, or a mounted CloudPirates
+PostgreSQL Secret. For a local development database:
 
 ```sh
 export DATABASE_URL='postgres://kubewreck:local-password@localhost:5432/kubewreck?sslmode=disable'
@@ -32,6 +32,61 @@ Open http://localhost:8080. Use `sslmode=verify-full` with the appropriate CA
 configuration when connecting to a remote database that requires verified TLS.
 URL-encode special characters in credentials. The application reads the environment
 at startup; it does not load `.env` files automatically.
+
+### CloudPirates PostgreSQL Secret
+
+Mount the chart's default Secret in the app container and set `POSTGRES_SECRET_DIR`
+to its mount path. Replace `my-postgres` with your Secret name; it must be in the
+same namespace as the app:
+
+```yaml
+# Inside the app's Pod template spec:
+containers:
+  - name: kubewreck-app
+    image: ghcr.io/nce/kubewreck-app:v2
+    env:
+      - name: POSTGRES_SECRET_DIR
+        value: /etc/postgres
+    volumeMounts:
+      - name: postgres-credentials
+        mountPath: /etc/postgres
+        readOnly: true
+volumes:
+  - name: postgres-credentials
+    secret:
+      secretName: my-postgres
+```
+
+The app reads the `host`, `port`, `username`, `database`, and `postgres-password`
+files. Missing optional files use defaults: port `5432`, user `postgres`, and
+database `postgres`. Host must be supplied. Passwords are read exactly as stored,
+including special characters, without needing URL encoding. Mounting credentials
+does not initialize the application schema; apply `db/init.sql` as described below.
+
+Alternatively, map Secret keys to `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE`, and
+`PGPASSWORD` using `env[].valueFrom.secretKeyRef`. For example:
+
+```yaml
+env:
+  - name: PGHOST
+    value: my-postgres
+  - name: PGPASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: my-postgres
+        key: postgres-password
+```
+
+`DATABASE_URL`, when nonempty, takes precedence. Otherwise, each explicitly set
+`PG*` variable overrides the corresponding mounted file. `PGSSLMODE` controls TLS
+when using individual settings (the driver defaults to `prefer`). Credentials are
+read at startup, so restart the app after changing or rotating the Secret.
+
+The current [CloudPirates Secret template](https://github.com/CloudPirates-io/helm-charts/blob/main/charts/postgres/templates/secret.yaml)
+defines these keys; older chart versions may supply only the password, in which
+case configure the host and any non-default user/database through `PG*` variables.
+
+### Application schema
 
 The schema has a single `teams` row (`id = 1`), initially named `opdt`.
 The initialization script is safe to re-run and preserves an existing name.

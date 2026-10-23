@@ -43,6 +43,8 @@ func TestTeamPage(t *testing.T) {
 }
 
 func TestInvalidDatabaseConfiguration(t *testing.T) {
+	t.Setenv("PGHOST", "")
+	t.Setenv("POSTGRES_SECRET_DIR", "")
 	for _, url := range []string{"", "postgres://%invalid"} {
 		store := newTeamStore(url)
 		if _, err := store.teamName(context.Background()); err == nil {
