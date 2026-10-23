@@ -6,7 +6,7 @@
 
 # Kubewreck App
 
-This is a demo application which renders a static html page with
+This is a demo application which renders an HTML page with a team name from PostgreSQL and
 instructions on how to upgrade the application in kubernetes.
 
 In our `kubewreck` challenges, we tinker with kubernetes resources
@@ -16,6 +16,9 @@ displays a new version of the page
 
 
 ## Build
+
+See [application setup](app/README.md#postgresql-setup) for database provisioning,
+environment configuration, and local development.
 
 Build App and Image via:
 
