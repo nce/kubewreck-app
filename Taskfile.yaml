@@ -38,7 +38,6 @@ tasks:
         --target v1
         --build-arg APP_VERSION="v1"
         --platform linux/amd64
-        --platform linux/arm64
         --push
         --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v1 .
     - docker buildx build
@@ -46,7 +45,6 @@ tasks:
         --target v2
         --build-arg APP_VERSION="v2"
         --platform linux/amd64
-        --platform linux/arm64
         --push
         --tag {{.REGISTRY}}/{{.IMAGE_NAME}}:v2 .
   registry-login:
