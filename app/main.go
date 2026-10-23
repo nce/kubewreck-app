@@ -1,10 +1,11 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -16,20 +17,15 @@ var embeddedFiles embed.FS
 var version = "dev"
 
 func main() {
-	subFS, err := fs.Sub(embeddedFiles, "static")
-	if err != nil {
-		log.Fatal(err)
+	page := template.Must(template.ParseFS(embeddedFiles, "static/index.html"))
+	store := newTeamStore(os.Getenv("DATABASE_URL"))
+	if store.pool != nil {
+		defer store.pool.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), databaseTimeout)
+		store.reportConnection(store.pool.Ping(ctx))
+		cancel()
 	}
-
-	fileServer := http.FileServer(http.FS(subFS))
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xhtml+xml; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-		w.Header().Set("Pragma", "no-cache")
-		w.Header().Set("Expires", "0")
-		fileServer.ServeHTTP(w, r)
-	})
+	http.HandleFunc("/", teamPage(page, store.teamName))
 
 	http.HandleFunc("/latest", func(w http.ResponseWriter, r *http.Request) {
 		const upgrade = `

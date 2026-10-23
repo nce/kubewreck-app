@@ -64,7 +64,12 @@
 
 <body>
   <div class="container">
-    <h1>Hello OPDT</h1>
+    {{if .Error}}
+    <h1>Team unavailable</h1>
+    <p role="alert">{{.Error}}</p>
+    {{else}}
+    <h1>Hello {{.TeamName}}</h1>
+    {{end}}
     <p>
       <div id="version" hx-get="/version" hx-trigger="load" hx-target="#version" hx-swap="beforeend">
         current version:
