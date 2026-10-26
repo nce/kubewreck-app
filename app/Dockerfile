@@ -12,7 +12,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.version=${APP_VERSION}" -o app
 
 # ---- Runtime stage: v1 current setup ----
-FROM gcr.io/distroless/static-debian12:nonroot AS v1
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS v1
 
 WORKDIR /app
 
